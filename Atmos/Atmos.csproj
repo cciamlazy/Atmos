@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="Classes\Driver.cs" />
     <Compile Include="Classes\Helper.cs" />
+    <Compile Include="Classes\LED.cs" />
     <Compile Include="Classes\Sides.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>

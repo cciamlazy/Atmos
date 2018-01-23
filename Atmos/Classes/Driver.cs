@@ -8,6 +8,15 @@ using System.Threading.Tasks;
 
 namespace Atmos.Classes
 {
+    public enum LEDCommand
+    {
+        On,
+        Off,
+        Brightness,
+        SetLED,
+        SetAll
+    }
+
     public static class Driver
     {
         static SerialPort currentPort;
@@ -15,6 +24,9 @@ namespace Atmos.Classes
 
         static SerialPort mainPort;
         static string detectedPort;
+
+        static bool initialized = false;
+        static bool connected = false;
 
         public static bool Initialize()
         {
@@ -38,12 +50,13 @@ namespace Atmos.Classes
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error connecting: " + e.Message);
+                Console.WriteLine("Error initializing: " + e.Message);
             }
+            initialized = portFound;
             return portFound;
         }
 
-        /// Automatic detection provided by Richard210363 and found on https://playground.arduino.cc/Csharp/SerialCommsCSharp
+        /// Automatic detection provided by Richard210363 and can be found on https://playground.arduino.cc/Csharp/SerialCommsCSharp
         private static bool DetectArduino()
         {
             try
@@ -65,7 +78,7 @@ namespace Atmos.Classes
                 while (count > 0)
                 {
                     intReturnASCII = currentPort.ReadByte();
-                    returnMessage = returnMessage + Convert.ToChar(intReturnASCII);
+                    returnMessage += Convert.ToChar(intReturnASCII);
                     count--;
                 }
                 //ComPort.name = returnMessage;
@@ -81,13 +94,84 @@ namespace Atmos.Classes
             }
             catch (Exception e)
             {
+                Console.WriteLine("Error detecting (this is nothing to worry about): " + e.Message);
                 return false;
             }
         }
 
         public static bool Connect()
         {
+            if(!initialized)
+                if (!Initialize())
+                    return false;
 
+            try
+            {
+                mainPort = new SerialPort(detectedPort, 9600);
+                connected = true;
+            }
+            catch (Exception e)
+            {
+                connected = false;
+                Console.WriteLine("Error connecting: " + e.Message);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="buffer">First should be 8, second should be (int)LEDCommand</param>
+        /// <returns></returns>
+        public static async Task<string> SendData(byte[] buffer)
+        {
+            string returnMessage = "";
+            if(!connected)
+            {
+                Console.WriteLine("Error: Not connected to Arduino");
+                returnMessage = "Failed";
+                return returnMessage;
+            }
+
+            try
+            {
+                if (!mainPort.IsOpen)
+                    mainPort.Open();
+
+                mainPort.Write(buffer, 0, buffer.Length);
+                await Task.Delay(500);
+                //Thread.Sleep(100);
+                int count = currentPort.BytesToRead;
+                while (count > 0)
+                {
+                    returnMessage += Convert.ToChar(currentPort.ReadByte());
+                    count--;
+                }
+                mainPort.Close();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Failed to send data - " + buffer.ToString() + ": " + e.Message);
+                returnMessage = "Failed";
+            }
+
+            return returnMessage;
+        }
+
+        /// <summary>
+        /// Turn on and off the leds
+        /// </summary>
+        /// <param name="state">True = On, False = Off</param>
+        /// <returns>If the process was sent successfully</returns>
+        public static async Task<bool> ToggleLED(bool state)
+        {
+            byte[] buffer = new byte[2];
+            buffer[0] = Convert.ToByte(8);
+            buffer[1] = Convert.ToByte((int)(state ? LEDCommand.On : LEDCommand.Off));
+            string message = await SendData(buffer);
+            if (message == "Failed")
+                return false;
             return true;
         }
     }
