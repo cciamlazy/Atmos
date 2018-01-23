@@ -17,13 +17,15 @@ namespace Atmos.Classes
     {
         private Point _location;
         private Size _size;
+        private Sides _sides;
         private AmbietMode _mode;
         private int _ledCount;
 
-        public MonitorColor(Point location, Size size, int ledCount, AmbietMode mode = AmbietMode.Average)
+        public MonitorColor(Point location, Size size, Sides sides, int ledCount, AmbietMode mode = AmbietMode.Average)
         {
             _location = location;
             _size = size;
+            _sides = sides;
             _ledCount = ledCount;
             _mode = mode;
         }
