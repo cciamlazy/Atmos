@@ -163,12 +163,29 @@ namespace Atmos.Classes
         /// Turn on and off the leds
         /// </summary>
         /// <param name="state">True = On, False = Off</param>
-        /// <returns>If the process was sent successfully</returns>
+        /// <returns>If the process was sent successfully or not</returns>
         public static async Task<bool> ToggleLED(bool state)
         {
             byte[] buffer = new byte[2];
             buffer[0] = Convert.ToByte(8);
             buffer[1] = Convert.ToByte((int)(state ? LEDCommand.On : LEDCommand.Off));
+            string message = await SendData(buffer);
+            if (message == "Failed")
+                return false;
+            return true;
+        }
+
+        public static async Task<bool> SetBrightness(int brightness)
+        {
+            if (brightness < 0)
+                brightness = 0;
+            else if (brightness > 255)
+                brightness = 255;
+
+            byte[] buffer = new byte[3];
+            buffer[0] = Convert.ToByte(8);
+            buffer[1] = Convert.ToByte((int)LEDCommand.Brightness);
+            buffer[2] = Convert.ToByte(brightness);
             string message = await SendData(buffer);
             if (message == "Failed")
                 return false;

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,6 +35,8 @@ namespace Atmos.Classes
 
         private LED[] _leds;
         public LED[] LEDs { get { return _leds; } set { if(_leds.Length == value.Length) _leds = value; } }
+
+        Stopwatch stopwatch;
         #endregion
 
         public MonitorColor(Point location, Size size, Sides sides, int ledCount, AmbietMode mode = AmbietMode.Average)
@@ -47,7 +51,19 @@ namespace Atmos.Classes
 
         public async Task<bool> Update()
         {
+            await Task.Delay(0);
+            stopwatch.Start();
 
+            if (Mode == AmbietMode.Average)
+            {
+                
+            }
+            else if (Mode == AmbietMode.Exact)
+            {
+
+            }
+
+            stopwatch.Stop();
 
             return true;
         }

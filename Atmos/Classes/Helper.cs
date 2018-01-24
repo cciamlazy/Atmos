@@ -10,55 +10,65 @@ namespace Atmos.Classes
 {
     public static class Helper
     {
-        /// From https://stackoverflow.com/questions/1068373/how-to-calculate-the-average-rgb-color-values-of-a-bitmap
-        public static Color CalculateAverageColor(Bitmap bm)
+        public static Color getDominantColor(System.Drawing.Bitmap bmp)
         {
-            int width = bm.Width;
-            int height = bm.Height;
-            int red = 0;
-            int green = 0;
-            int blue = 0;
-            int minDiversion = 15; // drop pixels that do not differ by at least minDiversion between color values (white, gray or black)
-            int dropped = 0; // keep track of dropped pixels
-            long[] totals = new long[] { 0, 0, 0 };
-            int bppModifier = bm.PixelFormat == System.Drawing.Imaging.PixelFormat.Format24bppRgb ? 3 : 4; // cutting corners, will fail on anything else but 32 and 24 bit images
+            BitmapData srcData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
-            BitmapData srcData = bm.LockBits(new System.Drawing.Rectangle(0, 0, bm.Width, bm.Height), ImageLockMode.ReadOnly, bm.PixelFormat);
             int stride = srcData.Stride;
+
             IntPtr Scan0 = srcData.Scan0;
+
+            uint[] totals = new uint[] { 0, 0, 0 };
+
+            uint width = (uint)bmp.Width;
+            uint height = (uint)bmp.Height;
 
             unsafe
             {
-                byte* p = (byte*)(void*)Scan0;
+                uint* p = (uint*)(void*)Scan0;
 
-                for (int y = 0; y < height; y++)
+                uint pixelCount = width * height;
+                uint idx = 0;
+                while (idx < (pixelCount & ~0xff))
                 {
-                    for (int x = 0; x < width; x++)
+                    uint sumRR00BB = 0;
+                    uint sum00GG00 = 0;
+                    for (int j = 0; j < 0x100; j++)
                     {
-                        int idx = (y * stride) + x * bppModifier;
-                        red = p[idx + 2];
-                        green = p[idx + 1];
-                        blue = p[idx];
-                        if (Math.Abs(red - green) > minDiversion || Math.Abs(red - blue) > minDiversion || Math.Abs(green - blue) > minDiversion)
-                        {
-                            totals[2] += red;
-                            totals[1] += green;
-                            totals[0] += blue;
-                        }
-                        else
-                        {
-                            dropped++;
-                        }
+                        sumRR00BB += p[idx] & 0xff00ff;
+                        sum00GG00 += p[idx] & 0x00ff00;
+                        idx++;
                     }
+
+                    totals[0] += sumRR00BB >> 16;
+                    totals[1] += sum00GG00 >> 8;
+                    totals[2] += sumRR00BB & 0xffff;
+                }
+
+                // And the final partial block of fewer than 0x100 pixels.
+                {
+                    uint sumRR00BB = 0;
+                    uint sum00GG00 = 0;
+                    while (idx < pixelCount)
+                    {
+                        sumRR00BB += p[idx] & 0xff00ff;
+                        sum00GG00 += p[idx] & 0x00ff00;
+                        idx++;
+                    }
+
+                    totals[0] += sumRR00BB >> 16;
+                    totals[1] += sum00GG00 >> 8;
+                    totals[2] += sumRR00BB & 0xffff;
                 }
             }
 
-            int count = width * height - dropped;
-            int avgR = (int)(totals[2] / count);
-            int avgG = (int)(totals[1] / count);
-            int avgB = (int)(totals[0] / count);
+            uint avgB = totals[0] / (width * height);
+            uint avgG = totals[1] / (width * height);
+            uint avgR = totals[2] / (width * height);
 
-            return Color.FromArgb(avgR, avgG, avgB);
+            bmp.UnlockBits(srcData);
+
+            return Color.FromArgb((int)avgR, (int)avgG, (int)avgB);
         }
     }
 }
